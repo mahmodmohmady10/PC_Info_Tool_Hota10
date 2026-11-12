@@ -12,6 +12,8 @@ from tkinter import messagebox
 
 import customtkinter as ctk
 
+from monitoring.live_metrics import read_live_metrics, reset_network_baseline
+
 from hardware import (
     collect_system, collect_cpu, collect_ram, collect_gpu,
     collect_motherboard, collect_storage, collect_battery, collect_os,
@@ -80,6 +82,10 @@ class PCInfoApp(ctk.CTk):
         self.data = {}
         self.worker_queue = queue.Queue()
         self.active_page = "Dashboard"
+        self.monitor_running = False
+        self.monitor_after_id = None
+        self.metric_labels = {}
+        self.metric_bars = {}
         self.nav_buttons = {}
         self._build_shell()
         self.show_page("Dashboard")
@@ -153,6 +159,8 @@ class PCInfoApp(ctk.CTk):
         ctk.set_appearance_mode(value.lower())
 
     def show_page(self, page):
+        if self.active_page == "Live Monitor" and page != "Live Monitor":
+            self.stop_monitoring()
         self.active_page = page
         for key, button in self.nav_buttons.items():
             button.configure(fg_color=("#E8EEFF", "#26365B") if key == page else "transparent",
@@ -160,7 +168,7 @@ class PCInfoApp(ctk.CTk):
         titles = {
             "Dashboard": ("لوحة التحكم", "نظرة عامة على حالة ومكونات جهازك"),
             "Hardware": ("مكونات الجهاز", "تفاصيل المعالج والذاكرة والرسوميات والتخزين"),
-            "Live Monitor": ("المراقبة المباشرة", "قراءات الاستخدام اللحظية — قيد التطوير"),
+            "Live Monitor": ("المراقبة المباشرة", "متابعة استهلاك المعالج والذاكرة والتخزين والشبكة"),
             "Temperature": ("درجات الحرارة", "مصادر قياس الحرارة ستضاف في المرحلة التالية"),
             "Diagnostics": ("تشخيص الجهاز", "فحوصات منظمة مع توضيح الأدلة والنتائج"),
             "Benchmark": ("اختبار الأداء", "اختبارات قصيرة وآمنة لأداء المكونات"),
@@ -177,6 +185,8 @@ class PCInfoApp(ctk.CTk):
             self._build_dashboard()
         elif page == "Hardware":
             self._build_hardware()
+        elif page == "Live Monitor":
+            self._build_live_monitor()
         elif page == "Settings":
             self._build_settings()
         else:
@@ -279,6 +289,127 @@ class PCInfoApp(ctk.CTk):
             ctk.CTkLabel(panel, text=f"حالة الجمع: {result.status if result else 'لم يتم الجمع'}",
                          text_color="#21A179" if result and result.status == "available" else ("#B7791F", "#D6A34A"),
                          font=ctk.CTkFont(size=10)).grid(row=len(fields)+1, column=0, columnspan=2, sticky="w", padx=15, pady=(5, 11))
+
+    def _build_live_monitor(self):
+        wrap = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
+        wrap.grid(row=0, column=0, sticky="nsew")
+        wrap.grid_columnconfigure((0, 1), weight=1)
+
+        head = ctk.CTkFrame(wrap, corner_radius=14, fg_color=("#FFFFFF", "#151F35"),
+                            border_width=1, border_color=("#E4E7EC", "#263149"))
+        head.grid(row=0, column=0, columnspan=2, sticky="ew", padx=4, pady=(0, 12))
+        head.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(head, text="مراقبة موارد الجهاز",
+                     font=ctk.CTkFont(size=17, weight="bold")).grid(
+            row=0, column=0, sticky="w", padx=18, pady=(15, 3))
+        self.monitor_status = ctk.CTkLabel(head, text="متوقفة",
+                                           text_color=("#667085", "#A7B0C0"))
+        self.monitor_status.grid(row=0, column=1, padx=16)
+
+        controls = ctk.CTkFrame(head, fg_color="transparent")
+        controls.grid(row=1, column=0, columnspan=2, sticky="w", padx=14, pady=(7, 14))
+        self.monitor_start_btn = ctk.CTkButton(controls, text="▶ بدء المراقبة", width=130,
+                                               command=self.start_monitoring)
+        self.monitor_start_btn.pack(side="left", padx=4)
+        self.monitor_stop_btn = ctk.CTkButton(
+            controls, text="■ إيقاف", width=100, fg_color=("#E9EDF5", "#29344A"),
+            text_color=("#344054", "#E3E8F2"), hover_color=("#DDE3ED", "#36435D"),
+            command=self.stop_monitoring, state="disabled")
+        self.monitor_stop_btn.pack(side="left", padx=4)
+        self.monitor_timestamp = ctk.CTkLabel(controls, text="لم تبدأ القراءة بعد",
+                                               text_color=("#667085", "#A7B0C0"))
+        self.monitor_timestamp.pack(side="left", padx=12)
+
+        self.metric_labels = {}
+        self.metric_bars = {}
+        for idx, (key, title) in enumerate([
+            ("cpu", "استخدام المعالج"), ("ram", "استخدام الذاكرة"),
+            ("disk", "استخدام قرص النظام")]):
+            card = ctk.CTkFrame(wrap, corner_radius=14, fg_color=("#FFFFFF", "#151F35"),
+                                border_width=1, border_color=("#E4E7EC", "#263149"))
+            card.grid(row=1 + idx // 2, column=idx % 2, sticky="ew", padx=4, pady=5)
+            card.grid_columnconfigure(0, weight=1)
+            ctk.CTkLabel(card, text=title, font=ctk.CTkFont(size=13, weight="bold"),
+                         text_color=("#667085", "#A7B0C0")).grid(
+                row=0, column=0, sticky="w", padx=16, pady=(14, 5))
+            value = ctk.CTkLabel(card, text="—", font=ctk.CTkFont(size=25, weight="bold"))
+            value.grid(row=1, column=0, sticky="w", padx=16, pady=(0, 8))
+            bar = ctk.CTkProgressBar(card, height=10)
+            bar.grid(row=2, column=0, sticky="ew", padx=16, pady=(0, 15))
+            bar.set(0)
+            self.metric_labels[key] = value
+            self.metric_bars[key] = bar
+
+        net_card = ctk.CTkFrame(wrap, corner_radius=14, fg_color=("#FFFFFF", "#151F35"),
+                                border_width=1, border_color=("#E4E7EC", "#263149"))
+        net_card.grid(row=3, column=0, columnspan=2, sticky="ew", padx=4, pady=5)
+        net_card.grid_columnconfigure((0, 1), weight=1)
+        ctk.CTkLabel(net_card, text="حركة الشبكة", font=ctk.CTkFont(size=14, weight="bold")).grid(
+            row=0, column=0, columnspan=2, sticky="w", padx=16, pady=(14, 8))
+        self.metric_labels["download"] = ctk.CTkLabel(
+            net_card, text="التنزيل: —", font=ctk.CTkFont(size=15, weight="bold"))
+        self.metric_labels["download"].grid(row=1, column=0, sticky="w", padx=16, pady=(0, 14))
+        self.metric_labels["upload"] = ctk.CTkLabel(
+            net_card, text="الرفع: —", font=ctk.CTkFont(size=15, weight="bold"))
+        self.metric_labels["upload"].grid(row=1, column=1, sticky="w", padx=16, pady=(0, 14))
+        ctk.CTkLabel(
+            wrap,
+            text=("هذه المرحلة تقيس CPU وRAM والقرص والشبكة. لا تعرض حرارة أو استخدام GPU حالياً؛ "
+                  "لن نضع قيماً تقديرية مكان الحساسات الحقيقية."),
+            wraplength=850, justify="left", text_color=("#667085", "#A7B0C0")
+        ).grid(row=4, column=0, columnspan=2, sticky="w", padx=8, pady=12)
+
+    @staticmethod
+    def _format_rate(value):
+        amount = float(value)
+        for unit in ("B/s", "KB/s", "MB/s", "GB/s"):
+            if amount < 1024 or unit == "GB/s":
+                return f"{amount:.1f} {unit}"
+            amount /= 1024
+
+    def start_monitoring(self):
+        if self.monitor_running:
+            return
+        self.monitor_running = True
+        reset_network_baseline()
+        self.monitor_status.configure(text="● تعمل الآن", text_color="#21A179")
+        self.monitor_start_btn.configure(state="disabled")
+        self.monitor_stop_btn.configure(state="normal")
+        self._update_live_metrics()
+
+    def stop_monitoring(self):
+        self.monitor_running = False
+        if self.monitor_after_id is not None:
+            try:
+                self.after_cancel(self.monitor_after_id)
+            except Exception:
+                pass
+            self.monitor_after_id = None
+        if hasattr(self, "monitor_status"):
+            self.monitor_status.configure(text="متوقفة", text_color=("#667085", "#A7B0C0"))
+            self.monitor_start_btn.configure(state="normal")
+            self.monitor_stop_btn.configure(state="disabled")
+
+    def _update_live_metrics(self):
+        if not self.monitor_running or self.active_page != "Live Monitor":
+            return
+        try:
+            metrics = read_live_metrics()
+            for key, field in (("cpu", "cpu_percent"), ("ram", "ram_percent"),
+                               ("disk", "disk_percent")):
+                value = max(0.0, min(100.0, metrics[field]))
+                self.metric_labels[key].configure(text=f"{value:.1f}%")
+                self.metric_bars[key].set(value / 100.0)
+            self.metric_labels["download"].configure(
+                text=f"التنزيل: {self._format_rate(metrics['download_bps'])}")
+            self.metric_labels["upload"].configure(
+                text=f"الرفع: {self._format_rate(metrics['upload_bps'])}")
+            self.monitor_timestamp.configure(text=f"آخر تحديث: {metrics['sampled_at']}")
+        except Exception as exc:
+            self.monitor_status.configure(text=f"تعذر القياس: {exc}", text_color="#C77D35")
+            self.stop_monitoring()
+            return
+        self.monitor_after_id = self.after(1000, self._update_live_metrics)
 
     def _build_settings(self):
         panel = ctk.CTkFrame(self.content, corner_radius=14, fg_color=("#FFFFFF", "#151F35"))
