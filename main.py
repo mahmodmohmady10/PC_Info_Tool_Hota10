@@ -13,6 +13,7 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 from monitoring.live_metrics import read_live_metrics, reset_network_baseline
+from temperature.providers import collect_temperature_report
 
 from hardware import (
     collect_system, collect_cpu, collect_ram, collect_gpu,
@@ -169,7 +170,7 @@ class PCInfoApp(ctk.CTk):
             "Dashboard": ("لوحة التحكم", "نظرة عامة على حالة ومكونات جهازك"),
             "Hardware": ("مكونات الجهاز", "تفاصيل المعالج والذاكرة والرسوميات والتخزين"),
             "Live Monitor": ("المراقبة المباشرة", "متابعة استهلاك المعالج والذاكرة والتخزين والشبكة"),
-            "Temperature": ("درجات الحرارة", "مصادر قياس الحرارة ستضاف في المرحلة التالية"),
+            "Temperature": ("درجات الحرارة", "قراءات المستشعرات مع توضيح مصدر كل قراءة"),
             "Diagnostics": ("تشخيص الجهاز", "فحوصات منظمة مع توضيح الأدلة والنتائج"),
             "Benchmark": ("اختبار الأداء", "اختبارات قصيرة وآمنة لأداء المكونات"),
             "History": ("السجل", "حفظ الجلسات ومقارنة النتائج يدوياً"),
@@ -187,6 +188,8 @@ class PCInfoApp(ctk.CTk):
             self._build_hardware()
         elif page == "Live Monitor":
             self._build_live_monitor()
+        elif page == "Temperature":
+            self._build_temperature_page()
         elif page == "Settings":
             self._build_settings()
         else:
@@ -410,6 +413,154 @@ class PCInfoApp(ctk.CTk):
             self.stop_monitoring()
             return
         self.monitor_after_id = self.after(1000, self._update_live_metrics)
+
+
+    def _build_temperature_page(self):
+        wrap = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
+        wrap.grid(row=0, column=0, sticky="nsew")
+        wrap.grid_columnconfigure(0, weight=1)
+
+        header = ctk.CTkFrame(
+            wrap, corner_radius=14, fg_color=("#FFFFFF", "#151F35"),
+            border_width=1, border_color=("#E4E7EC", "#263149")
+        )
+        header.grid(row=0, column=0, sticky="ew", padx=4, pady=(0, 12))
+        header.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            header, text="مستشعرات درجات الحرارة",
+            font=ctk.CTkFont(size=17, weight="bold")
+        ).grid(row=0, column=0, sticky="w", padx=18, pady=(15, 4))
+        ctk.CTkLabel(
+            header, text="يتم فحص كل مصدر بصورة مستقلة، ولا تُعرض قيم تقديرية.",
+            text_color=("#667085", "#A7B0C0")
+        ).grid(row=1, column=0, sticky="w", padx=18, pady=(0, 12))
+
+        self.temperature_refresh_btn = ctk.CTkButton(
+            header, text="↻ تحديث المستشعرات",
+            command=self.refresh_temperature_page
+        )
+        self.temperature_refresh_btn.grid(row=0, column=1, rowspan=2, padx=16)
+
+        self.temperature_body = ctk.CTkFrame(wrap, fg_color="transparent")
+        self.temperature_body.grid(row=1, column=0, sticky="ew")
+        self.temperature_body.grid_columnconfigure(0, weight=1)
+
+        self.temperature_note = ctk.CTkLabel(
+            wrap, text="جارٍ تجهيز صفحة المستشعرات...",
+            wraplength=850, justify="left",
+            text_color=("#667085", "#A7B0C0")
+        )
+        self.temperature_note.grid(row=2, column=0, sticky="w", padx=8, pady=12)
+        self.refresh_temperature_page()
+        self._schedule_temperature_refresh()
+
+    def _schedule_temperature_refresh(self):
+        if getattr(self, "active_page", None) == "Temperature" and self.winfo_exists():
+            self.after(5000, self._temperature_auto_refresh)
+
+    def _temperature_auto_refresh(self):
+        if getattr(self, "active_page", None) == "Temperature" and self.winfo_exists():
+            # Avoid overlapping requests while a previous refresh is still running.
+            if str(self.temperature_refresh_btn.cget("state")) != "disabled":
+                self.refresh_temperature_page()
+            self._schedule_temperature_refresh()
+
+    def refresh_temperature_page(self):
+        if self.active_page != "Temperature":
+            return
+
+        self.temperature_refresh_btn.configure(
+            state="disabled", text="جارٍ الفحص..."
+        )
+        for child in self.temperature_body.winfo_children():
+            child.destroy()
+
+        def worker():
+            try:
+                report = collect_temperature_report()
+                self.after(0, lambda: self._render_temperature_report(report))
+            except Exception as exc:
+                self.after(0, lambda: self._show_temperature_error(str(exc)))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _show_temperature_error(self, message):
+        if not self.winfo_exists():
+            return
+        self.temperature_refresh_btn.configure(
+            state="normal", text="↻ تحديث المستشعرات"
+        )
+        ctk.CTkLabel(
+            self.temperature_body,
+            text=f"تعذر جمع بيانات الحرارة: {message}",
+            text_color="#C77D35", wraplength=850
+        ).pack(anchor="w", padx=12, pady=12)
+
+    def _render_temperature_report(self, report):
+        if not self.winfo_exists():
+            return
+
+        self.temperature_refresh_btn.configure(
+            state="normal", text="↻ تحديث المستشعرات"
+        )
+        for child in self.temperature_body.winfo_children():
+            child.destroy()
+
+        for provider in report.get("providers", []):
+            card = ctk.CTkFrame(
+                self.temperature_body, corner_radius=14,
+                fg_color=("#FFFFFF", "#151F35"), border_width=1,
+                border_color=("#E4E7EC", "#263149")
+            )
+            card.pack(fill="x", padx=4, pady=6)
+
+            ctk.CTkLabel(
+                card, text=provider.get("source", "مصدر غير معروف"),
+                font=ctk.CTkFont(size=14, weight="bold")
+            ).pack(anchor="w", padx=16, pady=(13, 3))
+
+            status = provider.get("status", "unavailable")
+            status_labels = {
+                "available": "متاح",
+                "unsupported": "لا توجد مستشعرات حرارة",
+                "unavailable": "غير متاح"
+            }
+            ctk.CTkLabel(
+                card, text="الحالة: " + status_labels.get(status, status),
+                text_color=("#16845D", "#55C69A") if status == "available"
+                else ("#9A6700", "#E3B45B")
+            ).pack(anchor="w", padx=16, pady=2)
+
+            for sensor in provider.get("sensors", []):
+                category_labels = {
+                    "cpu": "المعالج",
+                    "gpu": "بطاقة الرسوميات",
+                    "storage": "وحدة التخزين",
+                    "other": "مستشعر آخر",
+                }
+                label = sensor.get("name", "مستشعر")
+                category = sensor.get("category")
+                if category:
+                    label = f"{category_labels.get(category, 'مستشعر')} — {label}"
+                if sensor.get("parent"):
+                    label += " — " + sensor["parent"]
+                label += f": {sensor['temperature_c']:.1f} °C"
+                ctk.CTkLabel(
+                    card, text=label, font=ctk.CTkFont(size=12),
+                    text_color=("#344054", "#D6DCEC")
+                ).pack(anchor="w", padx=28, pady=2)
+
+            ctk.CTkLabel(
+                card, text=provider.get("note", ""), wraplength=820,
+                justify="left", text_color=("#667085", "#A7B0C0"),
+                font=ctk.CTkFont(size=11)
+            ).pack(anchor="w", padx=16, pady=(5, 13))
+
+        self.temperature_note.configure(
+            text=report.get("important_note", "") + "\nآخر فحص: "
+            + report.get("collected_at", "غير معروف")
+        )
 
     def _build_settings(self):
         panel = ctk.CTkFrame(self.content, corner_radius=14, fg_color=("#FFFFFF", "#151F35"))
