@@ -6,14 +6,12 @@ import platform
 import threading
 import queue
 from dataclasses import asdict
-from datetime import datetime
-from pathlib import Path
 from tkinter import messagebox
 
 import customtkinter as ctk
 
 from monitoring.live_metrics import read_live_metrics, reset_network_baseline
-from temperature.providers import collect_temperature_report
+from diagnostics import run_diagnostics
 
 from hardware import (
     collect_system, collect_cpu, collect_ram, collect_gpu,
@@ -21,7 +19,7 @@ from hardware import (
 )
 
 APP_NAME = "PC INFO TOOL"
-APP_VERSION = "2.0  |  PHASE 2"
+APP_VERSION = "2.0  |  PHASE 5"
 
 
 def collect_all():
@@ -88,6 +86,8 @@ class PCInfoApp(ctk.CTk):
         self.metric_labels = {}
         self.metric_bars = {}
         self.nav_buttons = {}
+        self.diagnostics_report = None
+        self.diagnostics_running = False
         self._build_shell()
         self.show_page("Dashboard")
         self.refresh_data()
@@ -113,7 +113,6 @@ class PCInfoApp(ctk.CTk):
             ("Dashboard", "▦", "لوحة التحكم"),
             ("Hardware", "▣", "مكونات الجهاز"),
             ("Live Monitor", "◷", "المراقبة المباشرة"),
-            ("Temperature", "♨", "درجات الحرارة"),
             ("Diagnostics", "✓", "التشخيص"),
             ("Benchmark", "⌁", "اختبار الأداء"),
             ("History", "◴", "السجل"),
@@ -131,7 +130,7 @@ class PCInfoApp(ctk.CTk):
         ctk.CTkButton(self.sidebar, text="⚙    الإعدادات", anchor="w", height=40,
                       fg_color="transparent", text_color=("#344054", "#D6DCEC"),
                       hover_color=("#EEF2FF", "#202B45"), command=lambda: self.show_page("Settings")).pack(fill="x", padx=12)
-        ctk.CTkLabel(self.sidebar, text="PC Info Tool 2.0\nنسخة تطويرية — Phase 2", justify="left",
+        ctk.CTkLabel(self.sidebar, text="PC Info Tool 2.0\nنسخة تطويرية — Phase 5", justify="left",
                      text_color=("#98A2B3", "#667085"), font=ctk.CTkFont(size=10)).pack(side="bottom", anchor="w", padx=18, pady=18)
 
         self.main = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -170,7 +169,6 @@ class PCInfoApp(ctk.CTk):
             "Dashboard": ("لوحة التحكم", "نظرة عامة على حالة ومكونات جهازك"),
             "Hardware": ("مكونات الجهاز", "تفاصيل المعالج والذاكرة والرسوميات والتخزين"),
             "Live Monitor": ("المراقبة المباشرة", "متابعة استهلاك المعالج والذاكرة والتخزين والشبكة"),
-            "Temperature": ("درجات الحرارة", "قراءات المستشعرات مع توضيح مصدر كل قراءة"),
             "Diagnostics": ("تشخيص الجهاز", "فحوصات منظمة مع توضيح الأدلة والنتائج"),
             "Benchmark": ("اختبار الأداء", "اختبارات قصيرة وآمنة لأداء المكونات"),
             "History": ("السجل", "حفظ الجلسات ومقارنة النتائج يدوياً"),
@@ -188,8 +186,8 @@ class PCInfoApp(ctk.CTk):
             self._build_hardware()
         elif page == "Live Monitor":
             self._build_live_monitor()
-        elif page == "Temperature":
-            self._build_temperature_page()
+        elif page == "Diagnostics":
+            self._build_diagnostics()
         elif page == "Settings":
             self._build_settings()
         else:
@@ -226,7 +224,7 @@ class PCInfoApp(ctk.CTk):
         note = ctk.CTkFrame(wrap, corner_radius=14, fg_color=("#EEF3FF", "#172542"))
         note.grid(row=3, column=0, columnspan=3, sticky="ew", padx=5, pady=(16, 5))
         ctk.CTkLabel(note, text="ملاحظة الإصدار", font=ctk.CTkFont(size=13, weight="bold"), text_color=("#3156C8", "#AFC2FF")).pack(anchor="w", padx=16, pady=(13, 4))
-        ctk.CTkLabel(note, text="هذه نسخة الواجهة الأولى. أقسام المراقبة والحرارة والتشخيص والاختبارات والسجل ستُفعّل تدريجياً بعد اختبار كل وحدة.",
+        ctk.CTkLabel(note, text="هذه نسخة تطويرية تجمع معلومات الجهاز وتراقب موارده، وتضيف الآن فحوصات تشخيصية أولية قابلة للتحقق.",
                      justify="left", wraplength=800, text_color=("#475467", "#B8C4D9")).pack(anchor="w", padx=16, pady=(0, 13))
         if self.data:
             self._update_dashboard_cards()
@@ -415,152 +413,86 @@ class PCInfoApp(ctk.CTk):
         self.monitor_after_id = self.after(1000, self._update_live_metrics)
 
 
-    def _build_temperature_page(self):
+    def _build_diagnostics(self):
         wrap = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         wrap.grid(row=0, column=0, sticky="nsew")
         wrap.grid_columnconfigure(0, weight=1)
 
-        header = ctk.CTkFrame(
-            wrap, corner_radius=14, fg_color=("#FFFFFF", "#151F35"),
-            border_width=1, border_color=("#E4E7EC", "#263149")
-        )
-        header.grid(row=0, column=0, sticky="ew", padx=4, pady=(0, 12))
-        header.grid_columnconfigure(0, weight=1)
+        intro = ctk.CTkFrame(wrap, corner_radius=14, fg_color=("#FFFFFF", "#151F35"),
+                             border_width=1, border_color=("#E4E7EC", "#263149"))
+        intro.grid(row=0, column=0, sticky="ew", padx=4, pady=(0, 12))
+        intro.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(intro, text="فحص أولي لحالة الجهاز", font=ctk.CTkFont(size=17, weight="bold")).grid(
+            row=0, column=0, sticky="w", padx=18, pady=(15, 4))
+        ctk.CTkLabel(intro, text="فحوصات قراءة فقط للمعالج والذاكرة والتخزين والشبكة والبطارية.",
+                     text_color=("#667085", "#A7B0C0")).grid(row=1, column=0, sticky="w", padx=18, pady=(0, 12))
+        self.diagnostics_button = ctk.CTkButton(intro, text="▶ بدء الفحص", width=135,
+                                                command=self.start_diagnostics)
+        self.diagnostics_button.grid(row=0, column=1, rowspan=2, padx=18)
+        self.diagnostics_summary = ctk.CTkLabel(wrap, text="لم يتم إجراء فحص بعد.",
+                                                font=ctk.CTkFont(size=13, weight="bold"))
+        self.diagnostics_summary.grid(row=1, column=0, sticky="w", padx=8, pady=(2, 8))
+        self.diagnostics_results = ctk.CTkFrame(wrap, fg_color="transparent")
+        self.diagnostics_results.grid(row=2, column=0, sticky="ew")
+        self.diagnostics_results.grid_columnconfigure(0, weight=1)
+        self.diagnostics_footer = ctk.CTkLabel(
+            wrap, text="الفحص إرشادي ولا يستبدل أدوات اختبار العتاد المتخصصة.",
+            wraplength=850, justify="left", text_color=("#667085", "#A7B0C0"))
+        self.diagnostics_footer.grid(row=3, column=0, sticky="w", padx=8, pady=12)
+        if self.diagnostics_report:
+            self._render_diagnostics(self.diagnostics_report)
 
-        ctk.CTkLabel(
-            header, text="مستشعرات درجات الحرارة",
-            font=ctk.CTkFont(size=17, weight="bold")
-        ).grid(row=0, column=0, sticky="w", padx=18, pady=(15, 4))
-        ctk.CTkLabel(
-            header, text="يتم فحص كل مصدر بصورة مستقلة، ولا تُعرض قيم تقديرية.",
-            text_color=("#667085", "#A7B0C0")
-        ).grid(row=1, column=0, sticky="w", padx=18, pady=(0, 12))
-
-        self.temperature_refresh_btn = ctk.CTkButton(
-            header, text="↻ تحديث المستشعرات",
-            command=self.refresh_temperature_page
-        )
-        self.temperature_refresh_btn.grid(row=0, column=1, rowspan=2, padx=16)
-
-        self.temperature_body = ctk.CTkFrame(wrap, fg_color="transparent")
-        self.temperature_body.grid(row=1, column=0, sticky="ew")
-        self.temperature_body.grid_columnconfigure(0, weight=1)
-
-        self.temperature_note = ctk.CTkLabel(
-            wrap, text="جارٍ تجهيز صفحة المستشعرات...",
-            wraplength=850, justify="left",
-            text_color=("#667085", "#A7B0C0")
-        )
-        self.temperature_note.grid(row=2, column=0, sticky="w", padx=8, pady=12)
-        self.refresh_temperature_page()
-        self._schedule_temperature_refresh()
-
-    def _schedule_temperature_refresh(self):
-        if getattr(self, "active_page", None) == "Temperature" and self.winfo_exists():
-            self.after(5000, self._temperature_auto_refresh)
-
-    def _temperature_auto_refresh(self):
-        if getattr(self, "active_page", None) == "Temperature" and self.winfo_exists():
-            # Avoid overlapping requests while a previous refresh is still running.
-            if str(self.temperature_refresh_btn.cget("state")) != "disabled":
-                self.refresh_temperature_page()
-            self._schedule_temperature_refresh()
-
-    def refresh_temperature_page(self):
-        if self.active_page != "Temperature":
+    def start_diagnostics(self):
+        if self.diagnostics_running:
             return
+        self.diagnostics_running = True
+        self.diagnostics_button.configure(state="disabled", text="جارٍ الفحص...")
+        self.diagnostics_summary.configure(text="جارٍ تنفيذ الفحوصات...")
+        threading.Thread(target=self._diagnostics_worker, daemon=True).start()
 
-        self.temperature_refresh_btn.configure(
-            state="disabled", text="جارٍ الفحص..."
-        )
-        for child in self.temperature_body.winfo_children():
+    def _diagnostics_worker(self):
+        try:
+            self.worker_queue.put(("diagnostics_success", run_diagnostics()))
+        except Exception as exc:
+            self.worker_queue.put(("diagnostics_error", str(exc)))
+
+    def _render_diagnostics(self, report):
+        for child in self.diagnostics_results.winfo_children():
             child.destroy()
-
-        def worker():
-            try:
-                report = collect_temperature_report()
-                self.after(0, lambda: self._render_temperature_report(report))
-            except Exception as exc:
-                self.after(0, lambda: self._show_temperature_error(str(exc)))
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def _show_temperature_error(self, message):
-        if not self.winfo_exists():
-            return
-        self.temperature_refresh_btn.configure(
-            state="normal", text="↻ تحديث المستشعرات"
-        )
-        ctk.CTkLabel(
-            self.temperature_body,
-            text=f"تعذر جمع بيانات الحرارة: {message}",
-            text_color="#C77D35", wraplength=850
-        ).pack(anchor="w", padx=12, pady=12)
-
-    def _render_temperature_report(self, report):
-        if not self.winfo_exists():
-            return
-
-        self.temperature_refresh_btn.configure(
-            state="normal", text="↻ تحديث المستشعرات"
-        )
-        for child in self.temperature_body.winfo_children():
-            child.destroy()
-
-        for provider in report.get("providers", []):
-            card = ctk.CTkFrame(
-                self.temperature_body, corner_radius=14,
-                fg_color=("#FFFFFF", "#151F35"), border_width=1,
-                border_color=("#E4E7EC", "#263149")
-            )
-            card.pack(fill="x", padx=4, pady=6)
-
-            ctk.CTkLabel(
-                card, text=provider.get("source", "مصدر غير معروف"),
-                font=ctk.CTkFont(size=14, weight="bold")
-            ).pack(anchor="w", padx=16, pady=(13, 3))
-
-            status = provider.get("status", "unavailable")
-            status_labels = {
-                "available": "متاح",
-                "unsupported": "لا توجد مستشعرات حرارة",
-                "unavailable": "غير متاح"
-            }
-            ctk.CTkLabel(
-                card, text="الحالة: " + status_labels.get(status, status),
-                text_color=("#16845D", "#55C69A") if status == "available"
-                else ("#9A6700", "#E3B45B")
-            ).pack(anchor="w", padx=16, pady=2)
-
-            for sensor in provider.get("sensors", []):
-                category_labels = {
-                    "cpu": "المعالج",
-                    "gpu": "بطاقة الرسوميات",
-                    "storage": "وحدة التخزين",
-                    "other": "مستشعر آخر",
-                }
-                label = sensor.get("name", "مستشعر")
-                category = sensor.get("category")
-                if category:
-                    label = f"{category_labels.get(category, 'مستشعر')} — {label}"
-                if sensor.get("parent"):
-                    label += " — " + sensor["parent"]
-                label += f": {sensor['temperature_c']:.1f} °C"
-                ctk.CTkLabel(
-                    card, text=label, font=ctk.CTkFont(size=12),
-                    text_color=("#344054", "#D6DCEC")
-                ).pack(anchor="w", padx=28, pady=2)
-
-            ctk.CTkLabel(
-                card, text=provider.get("note", ""), wraplength=820,
-                justify="left", text_color=("#667085", "#A7B0C0"),
-                font=ctk.CTkFont(size=11)
-            ).pack(anchor="w", padx=16, pady=(5, 13))
-
-        self.temperature_note.configure(
-            text=report.get("important_note", "") + "\nآخر فحص: "
-            + report.get("collected_at", "غير معروف")
-        )
+        counts = report.get("counts", {})
+        summary = (f"اكتمل الفحص: {counts.get('good', 0)} سليم | "
+                   f"{counts.get('warning', 0)} تحذير | "
+                   f"{counts.get('problem', 0)} مشكلة | "
+                   f"{counts.get('info', 0)} معلومات")
+        self.diagnostics_summary.configure(text=summary + "    •    " + report.get("checked_at", ""))
+        palette = {
+            "good": ("#EAF7F1", "#17382F", "#16845D", "سليم"),
+            "warning": ("#FFF6E5", "#3B3020", "#B7791F", "تحذير"),
+            "problem": ("#FDECEC", "#402426", "#C34242", "مشكلة"),
+            "info": ("#F2F4F7", "#202B3D", "#667085", "معلومات"),
+        }
+        for item in report.get("checks", []):
+            bg_light, bg_dark, accent, status_text = palette.get(item.get("status"), palette["info"])
+            card = ctk.CTkFrame(self.diagnostics_results, corner_radius=12,
+                                fg_color=(bg_light, bg_dark), border_width=1,
+                                border_color=("#E4E7EC", "#263149"))
+            card.pack(fill="x", padx=4, pady=5)
+            top = ctk.CTkFrame(card, fg_color="transparent")
+            top.pack(fill="x", padx=14, pady=(11, 3))
+            ctk.CTkLabel(top, text=item.get("title", "فحص"),
+                         font=ctk.CTkFont(size=14, weight="bold")).pack(side="left")
+            ctk.CTkLabel(top, text=status_text, text_color=accent,
+                         font=ctk.CTkFont(size=11, weight="bold")).pack(side="right")
+            ctk.CTkLabel(card, text=item.get("value", "—"), anchor="w", justify="left",
+                         font=ctk.CTkFont(size=13, weight="bold"), wraplength=800).pack(
+                fill="x", padx=14, pady=2)
+            ctk.CTkLabel(card, text=item.get("details", ""), anchor="w", justify="left",
+                         text_color=("#475467", "#B8C4D9"), wraplength=850).pack(
+                fill="x", padx=14, pady=2)
+            ctk.CTkLabel(card, text="المصدر: " + item.get("source", "غير معروف"),
+                         text_color=("#667085", "#929BAA"), font=ctk.CTkFont(size=10)).pack(
+                anchor="w", padx=14, pady=(3, 10))
+        self.diagnostics_footer.configure(text=report.get("disclaimer", ""))
 
     def _build_settings(self):
         panel = ctk.CTkFrame(self.content, corner_radius=14, fg_color=("#FFFFFF", "#151F35"))
@@ -609,7 +541,18 @@ class PCInfoApp(ctk.CTk):
                         self.show_page("Hardware")
                     if hasattr(self, "status_label"):
                         self.status_label.configure(text="●  اكتمل جمع البيانات", text_color="#21A179")
-                else:
+                elif kind == "diagnostics_success":
+                    self.diagnostics_report = payload
+                    self.diagnostics_running = False
+                    if self.active_page == "Diagnostics":
+                        self._render_diagnostics(payload)
+                        self.diagnostics_button.configure(state="normal", text="↻ إعادة الفحص")
+                elif kind == "diagnostics_error":
+                    self.diagnostics_running = False
+                    if self.active_page == "Diagnostics":
+                        self.diagnostics_button.configure(state="normal", text="إعادة المحاولة")
+                        self.diagnostics_summary.configure(text="تعذر إكمال الفحص: " + payload)
+                elif kind == "error":
                     messagebox.showerror("خطأ في جمع البيانات", payload)
                     if hasattr(self, "status_label"):
                         self.status_label.configure(text="●  تعذر جمع بعض البيانات", text_color="#C77D35")

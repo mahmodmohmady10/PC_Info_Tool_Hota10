@@ -127,11 +127,14 @@ def read_libre_hardware_monitor():
 
 def read_libre_hardware_monitor_rest(url: str = "http://localhost:8085/data.json"):
     """Read temperature sensors from LibreHardwareMonitor's local REST JSON tree."""
-    from urllib.request import urlopen
+    from urllib.request import build_opener, ProxyHandler, Request
     from urllib.error import URLError, HTTPError
 
     try:
-        with urlopen(url, timeout=4) as response:
+        # localhost must bypass system HTTP proxies; this is a local-only endpoint.
+        opener = build_opener(ProxyHandler({}))
+        request = Request(url, headers={"Accept": "application/json"})
+        with opener.open(request, timeout=4) as response:
             payload = json.loads(response.read().decode("utf-8", errors="replace"))
     except (URLError, HTTPError, TimeoutError, OSError, json.JSONDecodeError) as exc:
         return {
@@ -160,7 +163,7 @@ def read_libre_hardware_monitor_rest(url: str = "http://localhost:8085/data.json
             # Type is essential: names such as CPU Core #1 also occur for voltage and clocks.
             if sensor_type == "temperature":
                 raw_value = str(node.get("Value") or "").strip()
-                match = re.search(r"(-?\\d+(?:\\.\\d+)?)\\s*°?\\s*C", raw_value, re.I)
+                match = re.search(r"(-?\d+(?:\.\d+)?)\s*°?\s*C", raw_value, re.I)
                 if match:
                     value = float(match.group(1))
                     sensor_id = str(node.get("SensorId") or "")

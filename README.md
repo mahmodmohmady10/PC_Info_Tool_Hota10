@@ -1,75 +1,51 @@
-# PC Info Tool 2.0 — Phase 3 (Live Monitor)
+# PC Info Tool 2.0 — Phase 5 (Diagnostics)
 
-Independent Windows 10/11 desktop application. The original `pc_info_tool1.py` remains untouched.
+تطبيق سطح مكتب مستقل لويندوز 10/11. ملف `pc_info_tool1.py` الأصلي لم يتم تعديله.
 
-## Phase 3 additions
-- Live CPU usage.
-- Live RAM usage.
-- System-drive usage.
-- Network upload/download throughput.
-- Start/stop controls; refreshes every second while the Live Monitor page is open.
-- No automatic persistent logging.
-- No fabricated GPU or temperature values.
+## الوظائف الحالية
+- جمع معلومات العتاد: الجهاز، CPU، RAM، GPU، اللوحة الأم، التخزين، البطارية ونظام التشغيل.
+- مراقبة مباشرة لاستخدام CPU وRAM وقرص النظام وحركة الشبكة.
+- صفحة تشخيص أولي بفحوصات قراءة فقط للمعالج والذاكرة ومساحة قرص النظام والحالة التي يبلغ عنها Windows للأقراص ومحولات الشبكة والبطارية.
+- واجهة عربية مع الوضع الداكن والفاتح.
+- إخراج تقرير معلومات العتاد بصيغة JSON عبر CLI.
 
-## Install
-Open CMD or PowerShell in this folder and run:
+## تشغيل المشروع
+افتح CMD أو PowerShell داخل مجلد المشروع:
 
 ```powershell
 py -m pip install -r requirements.txt
-```
-
-## Run GUI
-
-```powershell
 py main.py
 ```
 
-## JSON hardware report
+## تقرير JSON
 
 ```powershell
 py main.py --cli
 ```
 
-## Current limitations
-GPU utilization, CPU/GPU temperatures, diagnostics, benchmarks, SQLite session history, and PDF reports are not implemented yet.
+## تفاصيل التشخيص وحدوده
+- حمل CPU عينة قصيرة مدتها 0.7 ثانية؛ ليست اختبار أداء أو ضغط.
+- RAM يستخدم بيانات الذاكرة الافتراضية المتاحة من النظام.
+- مساحة القرص تقيس مساحة قسم Windows فقط.
+- حالة الأقراص تستخدم `Win32_DiskDrive.Status` من Windows CIM. ليست قراءة SMART كاملة ولا ضماناً لسلامة SSD/HDD.
+- فحص الشبكة يتحقق من وجود محول نشط فقط، ولا يثبت الوصول إلى الإنترنت.
+- فحص البطارية يقرأ نسبة الشحن وحالة توصيل الطاقة عند توفرها، ولا يقيس تآكل البطارية أو صحتها الكيميائية.
+- لا يجري التطبيق تعديلات على النظام أو حذف ملفات أو اختبارات ضغط.
+- عتبات التحذير إرشادية وقد تتأثر بالبرامج المفتوحة ووقت أخذ العينة.
 
+## ما تم إلغاؤه
+تم حذف صفحة درجات الحرارة ومزوداتها واعتمادها على LibreHardwareMonitor/REST/WMI من هذه النسخة بناءً على طلب المستخدم.
 
----
+## التحقق
+تم إجراء فحص صياغة Python لجميع ملفات المشروع واختبار وحدات التشخيص ببيانات النظام المتاحة في بيئة البناء. يلزم اختبار واجهة Windows الفعلية على جهاز المستخدم للتأكد من سلوك CIM وواجهة CustomTkinter هناك.
 
-## Phase 4 — Temperature Monitoring
+## الحالة التراكمية
+- Phase 1: مجمعات معلومات العتاد وCLI JSON.
+- Phase 2: واجهة GUI عربية ولوحة التحكم وصفحة العتاد والمظهر الداكن/الفاتح.
+- Phase 3: مراقبة CPU/RAM/قرص النظام والشبكة.
+- Phase 4: ملغاة — تم حذف ميزة الحرارة من هذا الإصدار.
+- Phase 5: التشخيص الأولي — أضيفت الفحوصات الموضحة أعلاه.
 
-### Added
-- Arabic temperature sensors page connected to the existing sidebar item.
-- LibreHardwareMonitor WMI temperature sensor reader.
-- Windows ACPI thermal-zone reader through `root\wmi`.
-- Independent status and source information for each provider.
-- Background collection thread to keep the GUI responsive.
-- Manual refresh control.
-- Explicit unavailable/unsupported states; no fabricated temperature values.
-
-### Important limitations
-- LibreHardwareMonitor must be installed/launched and expose its WMI provider for those readings to appear.
-- Windows ACPI thermal zones are not guaranteed to be CPU package temperature.
-- Actual sensor availability and readings must be verified on the target Windows device.
-
-### Validation
-- Python syntax compilation is performed before packaging.
-- Runtime hardware sensor validation is pending user testing.
-
-## Cumulative project status
-- Phase 1: hardware collectors and CLI JSON output — initial test completed.
-- Phase 2: Arabic GUI, dashboard, hardware page, dark/light modes — user confirmed GUI opens.
-- Phase 3: live CPU/RAM/system-drive/network monitoring — user supplied screenshot showing readings.
-- Phase 4: temperature integration — implemented in this package; device validation pending.
-
-## Next phase
-- Phase 5: diagnostics with evidence-based checks and clear warnings.
-
-
-## تحديث المرحلة الرابعة بعد اختبار الجهاز
-- أضيف مصدر LibreHardwareMonitor REST على `http://localhost:8085/data.json` كمصدر أساسي لقراءات الحرارة.
-- يجب تشغيل LibreHardwareMonitor وتفعيل `Options > Remote Web Server > Run`.
-- يتم اعتماد الحقل `Type` بحيث لا تُخلط مستشعرات الجهد أو الطاقة أو التردد مع الحرارة؛ لا تُقبل إلا المستشعرات من النوع `Temperature`.
-- أضيف تحديث تلقائي كل 5 ثوانٍ عند فتح صفحة الحرارة، مع تجنب تداخل عمليات التحديث.
-- تبقى قنوات WMI وWindows ACPI ظاهرة للتشخيص، لكنها ليست المصدر الأساسي.
-- اختبار المستخدم أكد ظهور حرارة CPU Package وCore Max وCore Average والأنوية والقرص عبر REST. القيم المرسلة كانت لقطة وقت الاختبار وليست اختبار ضغط.
+## التبعيات
+- `psutil`
+- `customtkinter`
