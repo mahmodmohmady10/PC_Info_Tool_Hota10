@@ -1,0 +1,129 @@
+==========================================
+      PC Info Tool 2.0 - EXE Builder
+==========================================
+
+Project folder: D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2
+Build log: D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\build_log.txt
+
+[INFO] Checking Python version...
+3.14.10 (tags/v3.14.10:b703b2c, Oct 25 2026, 17:36:52) [MSC v.1944 64 bit (AMD64)]
+
+[1/4] Checking pip...
+pip 26.3 from C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages\pip (python 3.14)
+
+[2/4] Installing project requirements...
+Requirement already satisfied: psutil>=5.9.8 in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from -r requirements.txt (line 1)) (7.2.2)
+Requirement already satisfied: customtkinter>=5.2.2 in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from -r requirements.txt (line 2)) (6.0.0)
+Requirement already satisfied: darkdetect in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from customtkinter>=5.2.2->-r requirements.txt (line 2)) (0.8.0)
+Requirement already satisfied: packaging in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from customtkinter>=5.2.2->-r requirements.txt (line 2)) (26.3)
+
+[3/4] Installing PyInstaller...
+Requirement already satisfied: pyinstaller in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (6.22.3)
+Requirement already satisfied: altgraph in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from pyinstaller) (0.17.5)
+Requirement already satisfied: packaging>=22.0 in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from pyinstaller) (26.3)
+Requirement already satisfied: pefile>=2022.5.30 in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from pyinstaller) (2024.8.26)
+Requirement already satisfied: pyinstaller-hooks-contrib>=2026.7 in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from pyinstaller) (2026.10)
+Requirement already satisfied: pywin32-ctypes>=0.2.1 in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from pyinstaller) (0.2.3)
+Requirement already satisfied: setuptools>=42.0.0 in C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages (from pyinstaller) (84.2.1)
+
+[4/4] Building the application...
+1448 INFO: PyInstaller: 6.22.3, contrib hooks: 2026.10
+1449 INFO: Python: 3.14.10
+1485 INFO: Platform: Windows-10-10.0.19045-SP0
+1485 INFO: Python environment: C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314
+1486 INFO: wrote D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\PCInfoTool2.spec
+1520 INFO: Removing temporary files and cleaning cache in C:\Users\hota10-laptop1\AppData\Local\pyinstaller
+5949 INFO: Module search paths (PYTHONPATH):
+['D:\\project_plus\\python_project\\PC_Info_Tool_GUI\\PC_Info_Tool_2_Phase2_GUI\\PC_Info_Tool_2',
+ 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\python314.zip',
+ 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\DLLs',
+ 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib',
+ 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314',
+ 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages',
+ 'D:\\project_plus\\python_project\\PC_Info_Tool_GUI\\PC_Info_Tool_2_Phase2_GUI\\PC_Info_Tool_2']
+pygame-ce 2.5.8 (SDL 2.32.10, Python 3.14.10)
+9146 INFO: Appending 'datas' from .spec
+9164 INFO: checking Analysis
+9164 INFO: Building Analysis because Analysis-00.toc is non existent
+9164 INFO: Looking for Python shared library...
+9164 INFO: Using Python shared library: C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\python314.dll
+9164 INFO: Running Analysis Analysis-00.toc
+9164 INFO: Target bytecode optimization level: 0
+9164 INFO: Initializing module dependency graph...
+9197 INFO: Initializing module graph hook caches...
+9406 INFO: Analyzing modules for base_library.zip ...
+13511 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+15504 INFO: Processing standard module hook 'hook-math.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+17704 INFO: Processing standard module hook 'hook-difflib.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+17775 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+19545 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+27011 INFO: Caching module dependency graph...
+27079 INFO: Analyzing D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\main.py
+27254 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+27436 INFO: Processing standard module hook 'hook-sysconfig.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+27548 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+27631 INFO: Processing pre-find-module-path hook 'hook-tkinter.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+27644 INFO: TclTkInfo: initializing cached Tcl/Tk info...
+28330 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+28671 INFO: Processing standard module hook 'hook-customtkinter.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+28822 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+28833 INFO: SetuptoolsInfo: initializing cached setuptools info...
+32208 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+33473 INFO: Processing standard module hook 'hook-PIL.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+33724 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+34706 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+34849 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+35496 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+37641 INFO: Processing standard module hook 'hook-psutil.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+38330 INFO: Analyzing hidden import 'darkdetect.__main__'
+38338 INFO: Processing module hooks (post-graph stage)...
+39829 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+40349 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks'
+40356 INFO: Performing binary vs. data reclassification (73 entries)
+40545 INFO: Looking for ctypes DLLs
+40605 WARNING: Ignoring AppKit.framework/AppKit imported from C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages\darkdetect\_mac_detect.py - only basenames are supported with ctypes imports!
+40681 INFO: Analyzing run-time hooks ...
+40683 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+40727 INFO: Including run-time hook 'pyi_rth__tkinter.py' from 'C:\\Users\\hota10-laptop1\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+40752 INFO: Creating base_library.zip...
+40795 INFO: Looking for dynamic libraries
+41498 INFO: Extra DLL search directories (AddDllDirectory): []
+41498 INFO: Extra DLL search directories (PATH): []
+43151 INFO: Warnings written to D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\build\PCInfoTool2\warn-PCInfoTool2.txt
+43235 INFO: Graph cross-reference written to D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\build\PCInfoTool2\xref-PCInfoTool2.html
+43369 INFO: checking PYZ
+43369 INFO: Building PYZ because PYZ-00.toc is non existent
+43369 INFO: Building PYZ (ZlibArchive) D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\build\PCInfoTool2\PYZ-00.pyz
+43665 INFO: Building PYZ (ZlibArchive) D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\build\PCInfoTool2\PYZ-00.pyz completed successfully.
+43708 INFO: checking PKG
+43708 INFO: Building PKG because PKG-00.toc is non existent
+43708 INFO: Building PKG (CArchive) PCInfoTool2.pkg
+43797 INFO: Building PKG (CArchive) PCInfoTool2.pkg completed successfully.
+43799 INFO: Bootloader C:\Users\hota10-laptop1\AppData\Local\Programs\Python\Python314\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+43799 INFO: checking EXE
+43799 INFO: Building EXE because EXE-00.toc is non existent
+43799 INFO: Building EXE from EXE-00.toc
+43799 INFO: Copying bootloader EXE to D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\build\PCInfoTool2\PCInfoTool2.exe
+44058 INFO: Copying icon to EXE
+44161 INFO: Copying 0 resources to EXE
+44161 INFO: Embedding manifest in EXE
+44229 INFO: Appending PKG archive to EXE
+44350 INFO: Fixing EXE headers
+44685 INFO: Building EXE from EXE-00.toc completed successfully.
+44690 INFO: checking COLLECT
+44690 INFO: Building COLLECT because COLLECT-00.toc is non existent
+44691 INFO: Building COLLECT COLLECT-00.toc
+45732 INFO: Building COLLECT COLLECT-00.toc completed successfully.
+45740 INFO: Build complete! The results are available in: D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\dist
+
+==========================================
+BUILD SUCCESSFUL
+==========================================
+EXE:
+D:\project_plus\python_project\PC_Info_Tool_GUI\PC_Info_Tool_2_Phase2_GUI\PC_Info_Tool_2\dist\PCInfoTool2\PCInfoTool2.exe
+
+IMPORTANT: distribute the ENTIRE folder:
+dist\PCInfoTool2
+
+
+Press any key to close this window...
