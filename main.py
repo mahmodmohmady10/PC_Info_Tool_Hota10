@@ -14,6 +14,7 @@ import customtkinter as ctk
 from monitoring.live_metrics import read_live_metrics, reset_network_baseline
 from diagnostics import run_diagnostics
 from benchmarking import run_benchmark, save_result, load_history, export_history_csv
+from reports import export_html_report, export_json_report
 
 from hardware import (
     collect_system, collect_cpu, collect_ram, collect_gpu,
@@ -21,7 +22,7 @@ from hardware import (
 )
 
 APP_NAME = "PC INFO TOOL"
-APP_VERSION = "2.0  |  PHASE 6"
+APP_VERSION = "2.0  |  PHASE 7"
 
 
 def collect_all():
@@ -92,6 +93,7 @@ class PCInfoApp(ctk.CTk):
         self.diagnostics_running = False
         self.benchmark_running = False
         self.benchmark_result = None
+        self.report_running = False
         self._build_shell()
         self.show_page("Dashboard")
         self.refresh_data()
@@ -134,7 +136,7 @@ class PCInfoApp(ctk.CTk):
         ctk.CTkButton(self.sidebar, text="⚙    الإعدادات", anchor="w", height=40,
                       fg_color="transparent", text_color=("#344054", "#D6DCEC"),
                       hover_color=("#EEF2FF", "#202B45"), command=lambda: self.show_page("Settings")).pack(fill="x", padx=12)
-        ctk.CTkLabel(self.sidebar, text="PC Info Tool 2.0\nنسخة تطويرية — Phase 5", justify="left",
+        ctk.CTkLabel(self.sidebar, text="PC Info Tool 2.0\nنسخة تطويرية — Phase 7", justify="left",
                      text_color=("#98A2B3", "#667085"), font=ctk.CTkFont(size=10)).pack(side="bottom", anchor="w", padx=18, pady=18)
 
         self.main = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -198,6 +200,8 @@ class PCInfoApp(ctk.CTk):
             self._build_benchmark()
         elif page == "History":
             self._build_history()
+        elif page == "Reports":
+            self._build_reports()
         elif page == "Settings":
             self._build_settings()
         else:
@@ -594,13 +598,69 @@ class PCInfoApp(ctk.CTk):
         except Exception as exc:
             messagebox.showerror("تعذر التصدير", str(exc))
 
+    def _build_reports(self):
+        wrap = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
+        wrap.grid(row=0, column=0, sticky="nsew")
+        wrap.grid_columnconfigure(0, weight=1)
+        panel = ctk.CTkFrame(wrap, corner_radius=14, fg_color=("#FFFFFF", "#151F35"),
+                             border_width=1, border_color=("#E4E7EC", "#263149"))
+        panel.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
+        ctk.CTkLabel(panel, text="إنشاء تقرير شامل عن الجهاز", font=ctk.CTkFont(size=18, weight="bold")).pack(
+            anchor="w", padx=18, pady=(18, 6))
+        ctk.CTkLabel(panel,
+            text="يجمع معلومات العتاد ونتائج التشخيص وسجل الأداء المحفوظ. اختر HTML للعرض والطباعة أو JSON للاستخدام التقني.",
+            text_color=("#667085", "#A7B0C0"), wraplength=780, justify="left").pack(
+            anchor="w", padx=18, pady=(0, 14))
+        actions = ctk.CTkFrame(panel, fg_color="transparent")
+        actions.pack(anchor="w", padx=18, pady=(0, 12))
+        self.report_html_button = ctk.CTkButton(actions, text="إنشاء تقرير HTML", width=170,
+                                                 command=lambda: self.export_report("html"))
+        self.report_html_button.pack(side="left", padx=(0, 8))
+        self.report_json_button = ctk.CTkButton(actions, text="تصدير JSON", width=140,
+                                                 fg_color="transparent", border_width=1,
+                                                 command=lambda: self.export_report("json"))
+        self.report_json_button.pack(side="left")
+        self.report_status = ctk.CTkLabel(panel, text="لم يتم إنشاء تقرير في هذه الجلسة.",
+                                           text_color=("#667085", "#A7B0C0"))
+        self.report_status.pack(anchor="w", padx=18, pady=(0, 18))
+        note = ctk.CTkLabel(wrap,
+            text="ملاحظة: إنشاء التقرير يجري جمعاً جديداً للمعلومات وتشخيصاً خفيفاً. قد تستغرق العملية عدة ثوانٍ. لا يتضمن التقرير درجات الحرارة.",
+            text_color=("#667085", "#A7B0C0"), wraplength=850, justify="left")
+        note.grid(row=1, column=0, sticky="w", padx=8, pady=12)
+
+    def export_report(self, report_format):
+        if self.report_running:
+            return
+        if report_format == "html":
+            destination = filedialog.asksaveasfilename(
+                defaultextension=".html", filetypes=[("HTML", "*.html")],
+                initialfile="PC_Info_Tool_System_Report.html")
+        else:
+            destination = filedialog.asksaveasfilename(
+                defaultextension=".json", filetypes=[("JSON", "*.json")],
+                initialfile="PC_Info_Tool_System_Report.json")
+        if not destination:
+            return
+        self.report_running = True
+        self.report_html_button.configure(state="disabled")
+        self.report_json_button.configure(state="disabled")
+        self.report_status.configure(text="جارٍ جمع المعلومات وإنشاء التقرير...")
+        threading.Thread(target=self._report_worker, args=(report_format, destination), daemon=True).start()
+
+    def _report_worker(self, report_format, destination):
+        try:
+            path = export_html_report(destination) if report_format == "html" else export_json_report(destination)
+            self.worker_queue.put(("report_success", (str(path), report_format)))
+        except Exception as exc:
+            self.worker_queue.put(("report_error", str(exc)))
+
     def _build_settings(self):
         panel = ctk.CTkFrame(self.content, corner_radius=14, fg_color=("#FFFFFF", "#151F35"))
         panel.grid(row=0, column=0, sticky="new", padx=4, pady=4)
         ctk.CTkLabel(panel, text="المظهر", font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w", padx=18, pady=(18, 8))
         ctk.CTkLabel(panel, text="يمكنك التبديل بين الوضع الداكن والفاتح من أعلى النافذة.", text_color=("#667085", "#A7B0C0")).pack(anchor="w", padx=18, pady=(0, 18))
         ctk.CTkLabel(panel, text="الخصوصية", font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w", padx=18, pady=(8, 8))
-        ctk.CTkLabel(panel, text="لا يتم حفظ سجل تلقائي في هذه المرحلة. جمع البيانات للقراءة فقط.", text_color=("#667085", "#A7B0C0")).pack(anchor="w", padx=18, pady=(0, 18))
+        ctk.CTkLabel(panel, text="يُحفظ سجل اختبارات الأداء محلياً على الجهاز. لا تُرسل بيانات العتاد أو التقارير إلى خادم خارجي.", text_color=("#667085", "#A7B0C0")).pack(anchor="w", padx=18, pady=(0, 18))
 
     def _build_coming_soon(self, page):
         panel = ctk.CTkFrame(self.content, corner_radius=16, fg_color=("#FFFFFF", "#151F35"), border_width=1,
@@ -662,6 +722,21 @@ class PCInfoApp(ctk.CTk):
                     if self.active_page == "Diagnostics":
                         self.diagnostics_button.configure(state="normal", text="إعادة المحاولة")
                         self.diagnostics_summary.configure(text="تعذر إكمال الفحص: " + payload)
+                elif kind == "report_success":
+                    self.report_running = False
+                    if self.active_page == "Reports" and hasattr(self, "report_status"):
+                        self.report_html_button.configure(state="normal")
+                        self.report_json_button.configure(state="normal")
+                        path, report_format = payload
+                        self.report_status.configure(text=f"تم إنشاء التقرير بنجاح: {path}")
+                        messagebox.showinfo("التقارير", f"تم حفظ التقرير بنجاح.\n{path}")
+                elif kind == "report_error":
+                    self.report_running = False
+                    if self.active_page == "Reports" and hasattr(self, "report_status"):
+                        self.report_html_button.configure(state="normal")
+                        self.report_json_button.configure(state="normal")
+                        self.report_status.configure(text="تعذر إنشاء التقرير: " + payload)
+                        messagebox.showerror("التقارير", payload)
                 elif kind == "error":
                     messagebox.showerror("خطأ في جمع البيانات", payload)
                     if hasattr(self, "status_label"):
