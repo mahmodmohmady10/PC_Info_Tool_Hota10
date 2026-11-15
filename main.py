@@ -5,6 +5,7 @@ import json
 import platform
 import threading
 import queue
+from tkinter import filedialog
 from dataclasses import asdict
 from tkinter import messagebox
 
@@ -12,6 +13,7 @@ import customtkinter as ctk
 
 from monitoring.live_metrics import read_live_metrics, reset_network_baseline
 from diagnostics import run_diagnostics
+from benchmarking import run_benchmark, save_result, load_history, export_history_csv
 
 from hardware import (
     collect_system, collect_cpu, collect_ram, collect_gpu,
@@ -19,7 +21,7 @@ from hardware import (
 )
 
 APP_NAME = "PC INFO TOOL"
-APP_VERSION = "2.0  |  PHASE 5"
+APP_VERSION = "2.0  |  PHASE 6"
 
 
 def collect_all():
@@ -88,6 +90,8 @@ class PCInfoApp(ctk.CTk):
         self.nav_buttons = {}
         self.diagnostics_report = None
         self.diagnostics_running = False
+        self.benchmark_running = False
+        self.benchmark_result = None
         self._build_shell()
         self.show_page("Dashboard")
         self.refresh_data()
@@ -170,6 +174,8 @@ class PCInfoApp(ctk.CTk):
             "Hardware": ("مكونات الجهاز", "تفاصيل المعالج والذاكرة والرسوميات والتخزين"),
             "Live Monitor": ("المراقبة المباشرة", "متابعة استهلاك المعالج والذاكرة والتخزين والشبكة"),
             "Diagnostics": ("تشخيص الجهاز", "فحوصات منظمة مع توضيح الأدلة والنتائج"),
+            "Benchmark": ("اختبار الأداء", "قياس تقريبي لأداء المعالج والذاكرة والقرص"),
+            "History": ("سجل الأداء", "الرجوع إلى نتائج الاختبارات السابقة وتصديرها"),
             "Benchmark": ("اختبار الأداء", "اختبارات قصيرة وآمنة لأداء المكونات"),
             "History": ("السجل", "حفظ الجلسات ومقارنة النتائج يدوياً"),
             "Reports": ("التقارير", "تصدير تقرير الجهاز بصيغ متعددة"),
@@ -188,6 +194,10 @@ class PCInfoApp(ctk.CTk):
             self._build_live_monitor()
         elif page == "Diagnostics":
             self._build_diagnostics()
+        elif page == "Benchmark":
+            self._build_benchmark()
+        elif page == "History":
+            self._build_history()
         elif page == "Settings":
             self._build_settings()
         else:
@@ -494,6 +504,96 @@ class PCInfoApp(ctk.CTk):
                 anchor="w", padx=14, pady=(3, 10))
         self.diagnostics_footer.configure(text=report.get("disclaimer", ""))
 
+    def _build_benchmark(self):
+        wrap = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
+        wrap.grid(row=0, column=0, sticky="nsew")
+        wrap.grid_columnconfigure(0, weight=1)
+        panel = ctk.CTkFrame(wrap, corner_radius=14, fg_color=("#FFFFFF", "#151F35"), border_width=1)
+        panel.grid(row=0, column=0, sticky="ew", padx=4, pady=4)
+        ctk.CTkLabel(panel, text="اختبار أداء مختصر", font=ctk.CTkFont(size=18, weight="bold")).pack(anchor="w", padx=18, pady=(18, 5))
+        ctk.CTkLabel(panel, text="يقيس سرعة تنفيذ مهمة CPU، وعمليات ذاكرة محدودة، وقراءة/كتابة ملف مؤقت 8MB ثم حذفه.",
+                     text_color=("#667085", "#A7B0C0"), wraplength=800, justify="left").pack(anchor="w", padx=18, pady=(0, 12))
+        self.benchmark_button = ctk.CTkButton(panel, text="▶ بدء اختبار الأداء", command=self.start_benchmark, width=180)
+        self.benchmark_button.pack(anchor="w", padx=18, pady=(0, 14))
+        self.benchmark_status = ctk.CTkLabel(wrap, text="لم يتم تنفيذ اختبار بعد.", font=ctk.CTkFont(size=13, weight="bold"))
+        self.benchmark_status.grid(row=1, column=0, sticky="w", padx=8, pady=12)
+        self.benchmark_results = ctk.CTkFrame(wrap, fg_color="transparent")
+        self.benchmark_results.grid(row=2, column=0, sticky="ew")
+        self.benchmark_results.grid_columnconfigure((0, 1), weight=1)
+        if self.benchmark_result:
+            self._render_benchmark(self.benchmark_result)
+        ctk.CTkLabel(wrap, text="تنبيه: هذا اختبار داخلي تقريبي وليس بديلاً عن أدوات القياس الاحترافية. النتائج تتأثر بالطاقة والحرارة والبرامج المفتوحة.",
+                     wraplength=850, justify="left", text_color=("#667085", "#A7B0C0")).grid(row=3, column=0, sticky="w", padx=8, pady=12)
+
+    def start_benchmark(self):
+        if self.benchmark_running:
+            return
+        self.benchmark_running = True
+        self.benchmark_button.configure(state="disabled", text="جارٍ الاختبار...")
+        self.benchmark_status.configure(text="يتم قياس الأداء. لا تغلق التطبيق...")
+        threading.Thread(target=self._benchmark_worker, daemon=True).start()
+
+    def _benchmark_worker(self):
+        try:
+            result = run_benchmark()
+            save_result(result)
+            self.worker_queue.put(("benchmark_success", result))
+        except Exception as exc:
+            self.worker_queue.put(("benchmark_error", str(exc)))
+
+    def _render_benchmark(self, result):
+        for child in self.benchmark_results.winfo_children():
+            child.destroy()
+        self.benchmark_status.configure(text="اكتمل الاختبار: " + result.get("timestamp", ""))
+        specs = [
+            ("سرعة CPU", f"{result['cpu_ops_per_second']:,.0f} عملية/ثانية"),
+            ("كتابة الذاكرة", f"{result['memory_write_mbs']:,.1f} MB/s"),
+            ("قراءة الذاكرة", f"{result['memory_read_mbs']:,.1f} MB/s"),
+            ("كتابة القرص", f"{result['disk_write_mbs']:,.1f} MB/s"),
+            ("قراءة القرص", f"{result['disk_read_mbs']:,.1f} MB/s"),
+            ("الذاكرة المتاحة", f"{result['ram_available_gb']:.2f} GB"),
+            ("المساحة الحرة", f"{result['disk_free_gb']:.2f} GB"),
+        ]
+        for index, (label, value) in enumerate(specs):
+            card = ctk.CTkFrame(self.benchmark_results, corner_radius=12, fg_color=("#FFFFFF", "#151F35"), border_width=1)
+            card.grid(row=index // 2, column=index % 2, sticky="ew", padx=4, pady=4)
+            ctk.CTkLabel(card, text=label, text_color=("#667085", "#A7B0C0")).pack(anchor="w", padx=14, pady=(10, 3))
+            ctk.CTkLabel(card, text=value, font=ctk.CTkFont(size=17, weight="bold")).pack(anchor="w", padx=14, pady=(0, 10))
+        self.benchmark_button.configure(state="normal", text="↻ إعادة الاختبار")
+
+    def _build_history(self):
+        wrap = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
+        wrap.grid(row=0, column=0, sticky="nsew")
+        wrap.grid_columnconfigure(0, weight=1)
+        top = ctk.CTkFrame(wrap, fg_color="transparent")
+        top.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        ctk.CTkButton(top, text="تصدير CSV", command=self.export_history).pack(side="left")
+        ctk.CTkButton(top, text="تحديث السجل", command=lambda: self.show_page("History"), fg_color="transparent", border_width=1).pack(side="left", padx=8)
+        history = list(reversed(load_history()))
+        if not history:
+            ctk.CTkLabel(wrap, text="لا توجد نتائج محفوظة بعد. نفّذ اختباراً من صفحة اختبار الأداء.",
+                         text_color=("#667085", "#A7B0C0")).grid(row=1, column=0, sticky="w", padx=8, pady=15)
+            return
+        headers = "التاريخ والوقت                 CPU عملية/ثانية        RAM كتابة        Disk كتابة        Disk قراءة"
+        ctk.CTkLabel(wrap, text=headers, font=ctk.CTkFont(size=12, weight="bold"), anchor="w").grid(row=1, column=0, sticky="ew", padx=8, pady=8)
+        for idx, item in enumerate(history[:50], start=2):
+            line = (f"{item.get('timestamp','')}     {item.get('cpu_ops_per_second',0):,.0f}     "
+                    f"{item.get('memory_write_mbs',0):.1f} MB/s     {item.get('disk_write_mbs',0):.1f} MB/s     "
+                    f"{item.get('disk_read_mbs',0):.1f} MB/s")
+            row = ctk.CTkFrame(wrap, corner_radius=8, fg_color=("#FFFFFF", "#151F35"))
+            row.grid(row=idx, column=0, sticky="ew", pady=3)
+            ctk.CTkLabel(row, text=line, anchor="w", font=ctk.CTkFont(size=11)).pack(fill="x", padx=12, pady=10)
+
+    def export_history(self):
+        destination = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV", "*.csv")], initialfile="PC_Info_Tool_Benchmark_History.csv")
+        if not destination:
+            return
+        try:
+            count = export_history_csv(destination)
+            messagebox.showinfo("تصدير السجل", f"تم تصدير {count} نتيجة.")
+        except Exception as exc:
+            messagebox.showerror("تعذر التصدير", str(exc))
+
     def _build_settings(self):
         panel = ctk.CTkFrame(self.content, corner_radius=14, fg_color=("#FFFFFF", "#151F35"))
         panel.grid(row=0, column=0, sticky="new", padx=4, pady=4)
@@ -541,6 +641,16 @@ class PCInfoApp(ctk.CTk):
                         self.show_page("Hardware")
                     if hasattr(self, "status_label"):
                         self.status_label.configure(text="●  اكتمل جمع البيانات", text_color="#21A179")
+                elif kind == "benchmark_success":
+                    self.benchmark_result = payload
+                    self.benchmark_running = False
+                    if self.active_page == "Benchmark":
+                        self._render_benchmark(payload)
+                elif kind == "benchmark_error":
+                    self.benchmark_running = False
+                    if self.active_page == "Benchmark":
+                        self.benchmark_button.configure(state="normal", text="إعادة المحاولة")
+                        self.benchmark_status.configure(text="تعذر الاختبار: " + payload)
                 elif kind == "diagnostics_success":
                     self.diagnostics_report = payload
                     self.diagnostics_running = False
