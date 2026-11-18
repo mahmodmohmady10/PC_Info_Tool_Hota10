@@ -50,3 +50,7 @@
 4. إذا فشل البناء، أرسل محتوى `build_log.txt` كاملاً.
 
 تأكد من تثبيت Python 3.10 أو أحدث بنسخة 64-bit، وتفعيل خيار Add Python to PATH أثناء التثبيت.
+
+## Release metadata (2.0.0)
+
+Keep `assets\\pc_info_tool.ico` and `version_info.txt` in the project folder. The build script uses them for the application icon and Windows file/product version metadata.

@@ -22,7 +22,7 @@ from hardware import (
 )
 
 APP_NAME = "PC INFO TOOL"
-APP_VERSION = "2.0  |  PHASE 7"
+APP_VERSION = "2.0.0"
 
 
 def collect_all():

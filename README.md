@@ -1,4 +1,6 @@
-# PC Info Tool 2.0 — Phase 7 (Reports & Release Preparation)
+Application version: **2.0.0**
+
+# PC Info Tool 2.0.0 — Release Candidate
 
 تطبيق سطح مكتب لويندوز 10/11 لجمع معلومات الجهاز ومراقبته وتشخيصه واختبار أدائه، مع إنشاء تقارير محلية. الملف الأصلي `pc_info_tool1.py` لم يتم تعديله.
 

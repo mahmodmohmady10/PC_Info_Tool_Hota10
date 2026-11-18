@@ -52,7 +52,7 @@ if errorlevel 1 goto :failed
 
 echo.
 echo [4/4] Building the application...
-%PY_CMD% -m PyInstaller --noconfirm --clean --windowed --onedir --name PCInfoTool2 --collect-all customtkinter --collect-all darkdetect main.py
+%PY_CMD% -m PyInstaller --noconfirm --clean --windowed --onedir --name PCInfoTool2 --icon "assets\pc_info_tool.ico" --version-file "version_info.txt" --add-data "assets;assets" --collect-all customtkinter --collect-all darkdetect main.py
 if errorlevel 1 goto :failed
 
 echo.
