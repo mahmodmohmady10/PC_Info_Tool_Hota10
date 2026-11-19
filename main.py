@@ -56,17 +56,26 @@ def run_cli():
 
 
 class InfoCard(ctk.CTkFrame):
+    """Compact dashboard card with a clear label/value hierarchy."""
     def __init__(self, master, title, value="—", hint="", **kwargs):
-        super().__init__(master, corner_radius=14, border_width=1, **kwargs)
-        self.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(self, text=title, font=ctk.CTkFont(size=13, weight="bold"),
-                     text_color=("#667085", "#A7B0C0")).grid(row=0, column=0, sticky="w", padx=16, pady=(14, 5))
-        self.value_label = ctk.CTkLabel(self, text=value, font=ctk.CTkFont(size=19, weight="bold"),
-                                        anchor="w", justify="left", wraplength=250)
-        self.value_label.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 4))
-        self.hint_label = ctk.CTkLabel(self, text=hint, font=ctk.CTkFont(size=11),
-                                       text_color=("#667085", "#929BAA"), anchor="w")
-        self.hint_label.grid(row=2, column=0, sticky="w", padx=16, pady=(0, 14))
+        super().__init__(master, corner_radius=16, border_width=1, **kwargs)
+        self.grid_columnconfigure(1, weight=1)
+        self.accent = ctk.CTkFrame(self, width=4, corner_radius=3,
+                                   fg_color="#5B8CFF")
+        self.accent.grid(row=0, column=0, rowspan=3, sticky="nsw", padx=(0, 12), pady=14)
+        body = ctk.CTkFrame(self, fg_color="transparent")
+        body.grid(row=0, column=1, sticky="nsew", padx=(0, 15), pady=13)
+        body.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(body, text=title, font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color=("#667085", "#A6B2C7"), anchor="w").grid(
+            row=0, column=0, sticky="w", pady=(0, 8))
+        self.value_label = ctk.CTkLabel(body, text=value,
+            font=ctk.CTkFont(size=17, weight="bold"), anchor="w", justify="left",
+            wraplength=250)
+        self.value_label.grid(row=1, column=0, sticky="ew", pady=(0, 5))
+        self.hint_label = ctk.CTkLabel(body, text=hint, font=ctk.CTkFont(size=10),
+            text_color=("#98A2B3", "#8492A8"), anchor="w", wraplength=250)
+        self.hint_label.grid(row=2, column=0, sticky="w")
 
     def set_value(self, value, hint=None):
         self.value_label.configure(text=value)
@@ -78,9 +87,9 @@ class PCInfoApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title(f"{APP_NAME} — {APP_VERSION}")
-        self.geometry("1180x760")
-        self.minsize(980, 650)
-        self.configure(fg_color=("#F4F6FA", "#0B1020"))
+        self.geometry("1280x820")
+        self.minsize(1080, 700)
+        self.configure(fg_color=("#F3F6FC", "#090F1D"))
         self.data = {}
         self.worker_queue = queue.Queue()
         self.active_page = "Dashboard"
@@ -103,58 +112,103 @@ class PCInfoApp(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        self.sidebar = ctk.CTkFrame(self, width=225, corner_radius=0, fg_color=("#FFFFFF", "#11182A"))
+        # Sidebar: restrained dark surface, strong active state, clearer grouping.
+        self.sidebar = ctk.CTkFrame(self, width=246, corner_radius=0,
+                                    fg_color=("#FFFFFF", "#101A2B"))
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_propagate(False)
 
         brand = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        brand.pack(fill="x", padx=18, pady=(25, 30))
-        ctk.CTkLabel(brand, text="◈", text_color="#6C8CFF", font=ctk.CTkFont(size=30, weight="bold")).pack(side="left")
+        brand.pack(fill="x", padx=20, pady=(25, 28))
+        mark = ctk.CTkFrame(brand, width=44, height=44, corner_radius=13,
+                            fg_color="#315FEA")
+        mark.pack(side="left")
+        mark.pack_propagate(False)
+        ctk.CTkLabel(mark, text="PC", text_color="#FFFFFF",
+                     font=ctk.CTkFont(size=16, weight="bold")).place(relx=.5, rely=.5, anchor="center")
         name_box = ctk.CTkFrame(brand, fg_color="transparent")
-        name_box.pack(side="left", padx=9)
-        ctk.CTkLabel(name_box, text="PC INFO TOOL", font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w")
-        ctk.CTkLabel(name_box, text="SYSTEM INSIGHTS", font=ctk.CTkFont(size=9), text_color=("#7B8495", "#8792A6")).pack(anchor="w")
+        name_box.pack(side="left", padx=11)
+        ctk.CTkLabel(name_box, text="PC INFO TOOL",
+                     font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(name_box, text="SYSTEM • INSIGHTS",
+                     text_color=("#8A94A6", "#8291A8"),
+                     font=ctk.CTkFont(size=9, weight="bold")).pack(anchor="w", pady=(2, 0))
 
+        ctk.CTkLabel(self.sidebar, text="القائمة الرئيسية", anchor="w",
+                     text_color=("#98A2B3", "#71819A"),
+                     font=ctk.CTkFont(size=10, weight="bold")).pack(
+            fill="x", padx=22, pady=(0, 9))
         nav_items = [
-            ("Dashboard", "▦", "لوحة التحكم"),
-            ("Hardware", "▣", "مكونات الجهاز"),
+            ("Dashboard", "⌂", "لوحة التحكم"),
+            ("Hardware", "▦", "مكونات الجهاز"),
             ("Live Monitor", "◷", "المراقبة المباشرة"),
             ("Diagnostics", "✓", "التشخيص"),
             ("Benchmark", "⌁", "اختبار الأداء"),
-            ("History", "◴", "السجل"),
+            ("History", "◴", "سجل الأداء"),
             ("Reports", "▤", "التقارير"),
         ]
         for key, glyph, label in nav_items:
-            btn = ctk.CTkButton(self.sidebar, text=f"{glyph}    {label}", anchor="w", height=42,
-                                corner_radius=9, fg_color="transparent", text_color=("#344054", "#D6DCEC"),
-                                hover_color=("#EEF2FF", "#202B45"),
-                                command=lambda k=key: self.show_page(k))
-            btn.pack(fill="x", padx=12, pady=3)
+            btn = ctk.CTkButton(
+                self.sidebar, text=f"{glyph}     {label}", anchor="w", height=45,
+                corner_radius=11, border_spacing=12,
+                font=ctk.CTkFont(size=13, weight="bold"),
+                fg_color="transparent", text_color=("#475467", "#C6D1E2"),
+                hover_color=("#EEF3FF", "#1B2A43"),
+                command=lambda k=key: self.show_page(k))
+            btn.pack(fill="x", padx=13, pady=3)
             self.nav_buttons[key] = btn
 
-        ctk.CTkFrame(self.sidebar, height=1, fg_color=("#E6EAF0", "#273149")).pack(fill="x", padx=16, pady=(22, 14))
-        ctk.CTkButton(self.sidebar, text="⚙    الإعدادات", anchor="w", height=40,
-                      fg_color="transparent", text_color=("#344054", "#D6DCEC"),
-                      hover_color=("#EEF2FF", "#202B45"), command=lambda: self.show_page("Settings")).pack(fill="x", padx=12)
-        ctk.CTkLabel(self.sidebar, text="PC Info Tool 2.0\nنسخة تطويرية — Phase 7", justify="left",
-                     text_color=("#98A2B3", "#667085"), font=ctk.CTkFont(size=10)).pack(side="bottom", anchor="w", padx=18, pady=18)
+        ctk.CTkFrame(self.sidebar, height=1,
+                     fg_color=("#E8ECF3", "#25334A")).pack(
+            fill="x", padx=18, pady=(22, 13))
+        settings_btn = ctk.CTkButton(
+            self.sidebar, text="⚙     الإعدادات", anchor="w", height=43,
+            corner_radius=11, border_spacing=12,
+            font=ctk.CTkFont(size=12, weight="bold"), fg_color="transparent",
+            text_color=("#475467", "#C6D1E2"), hover_color=("#EEF3FF", "#1B2A43"),
+            command=lambda: self.show_page("Settings"))
+        settings_btn.pack(fill="x", padx=13)
+
+        footer = ctk.CTkFrame(self.sidebar, corner_radius=12,
+                              fg_color=("#F4F6FA", "#17243A"))
+        footer.pack(side="bottom", fill="x", padx=14, pady=16)
+        ctk.CTkLabel(footer, text="●  يعمل محلياً على جهازك",
+                     text_color="#24A47A", font=ctk.CTkFont(size=10, weight="bold")).pack(
+            anchor="w", padx=12, pady=(10, 2))
+        ctk.CTkLabel(footer, text="PC Info Tool 2.0  •  Phase 9",
+                     text_color=("#8A94A6", "#8190A7"),
+                     font=ctk.CTkFont(size=9)).pack(anchor="w", padx=12, pady=(0, 10))
 
         self.main = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.main.grid(row=0, column=1, sticky="nsew", padx=26, pady=22)
+        self.main.grid(row=0, column=1, sticky="nsew", padx=28, pady=24)
         self.main.grid_columnconfigure(0, weight=1)
         self.main.grid_rowconfigure(1, weight=1)
 
-        top = ctk.CTkFrame(self.main, fg_color="transparent")
+        top = ctk.CTkFrame(self.main, corner_radius=16,
+                           fg_color=("#FFFFFF", "#111C30"), border_width=1,
+                           border_color=("#E6EAF1", "#202E45"))
         top.grid(row=0, column=0, sticky="ew", pady=(0, 20))
         top.grid_columnconfigure(0, weight=1)
-        self.page_title = ctk.CTkLabel(top, text="لوحة التحكم", font=ctk.CTkFont(size=25, weight="bold"))
-        self.page_title.grid(row=0, column=0, sticky="w")
-        self.page_subtitle = ctk.CTkLabel(top, text="نظرة عامة على حالة ومكونات جهازك", text_color=("#667085", "#9AA5B8"), font=ctk.CTkFont(size=12))
-        self.page_subtitle.grid(row=1, column=0, sticky="w", pady=(4, 0))
-        ctk.CTkButton(top, text="↻  تحديث البيانات", width=135, height=36, command=self.refresh_data).grid(row=0, column=1, rowspan=2, padx=(10, 8))
-        self.mode_switch = ctk.CTkSegmentedButton(top, values=["Dark", "Light"], width=125, command=self.change_mode)
+        title_box = ctk.CTkFrame(top, fg_color="transparent")
+        title_box.grid(row=0, column=0, sticky="w", padx=20, pady=14)
+        self.page_title = ctk.CTkLabel(title_box, text="لوحة التحكم",
+            font=ctk.CTkFont(size=23, weight="bold"))
+        self.page_title.pack(anchor="w")
+        self.page_subtitle = ctk.CTkLabel(title_box,
+            text="نظرة عامة على حالة ومكونات جهازك",
+            text_color=("#7B8799", "#91A0B6"), font=ctk.CTkFont(size=11))
+        self.page_subtitle.pack(anchor="w", pady=(3, 0))
+
+        actions = ctk.CTkFrame(top, fg_color="transparent")
+        actions.grid(row=0, column=1, sticky="e", padx=16)
+        self.refresh_btn = ctk.CTkButton(actions, text="↻  تحديث البيانات",
+            width=142, height=37, corner_radius=10, font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="#315FEA", hover_color="#244DC6", command=self.refresh_data)
+        self.refresh_btn.pack(side="left", padx=(0, 10))
+        self.mode_switch = ctk.CTkSegmentedButton(actions, values=["Dark", "Light"],
+            width=118, height=34, corner_radius=9, command=self.change_mode)
         self.mode_switch.set("Dark")
-        self.mode_switch.grid(row=0, column=2, rowspan=2)
+        self.mode_switch.pack(side="left")
 
         self.content = ctk.CTkFrame(self.main, fg_color="transparent")
         self.content.grid(row=1, column=0, sticky="nsew")
@@ -210,16 +264,28 @@ class PCInfoApp(ctk.CTk):
     def _build_dashboard(self):
         wrap = ctk.CTkScrollableFrame(self.content, fg_color="transparent")
         wrap.grid(row=0, column=0, sticky="nsew")
-        wrap.grid_columnconfigure((0, 1, 2), weight=1)
+        wrap.grid_columnconfigure((0, 1, 2), weight=1, uniform="dashboard")
 
-        hero = ctk.CTkFrame(wrap, corner_radius=16, fg_color=("#FFFFFF", "#151F35"), border_width=1)
-        hero.grid(row=0, column=0, columnspan=3, sticky="ew", pady=(0, 16))
+        hero = ctk.CTkFrame(wrap, corner_radius=19,
+            fg_color=("#FFFFFF", "#14223A"), border_width=1,
+            border_color=("#E3EAF5", "#263A59"))
+        hero.grid(row=0, column=0, columnspan=3, sticky="ew", pady=(0, 15))
         hero.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(hero, text="مرحباً بك في PC Info Tool", font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, sticky="w", padx=22, pady=(18, 4))
-        ctk.CTkLabel(hero, text="اجمع معلومات جهازك، راقب حالته، وافهم أداء مكوناته من مكان واحد.",
-                     text_color=("#667085", "#A7B0C0"), font=ctk.CTkFont(size=12)).grid(row=1, column=0, sticky="w", padx=22, pady=(0, 18))
-        self.status_label = ctk.CTkLabel(hero, text="●  جاري تجهيز البيانات...", text_color="#D69E36", font=ctk.CTkFont(size=11, weight="bold"))
-        self.status_label.grid(row=0, column=1, rowspan=2, padx=22)
+        ctk.CTkLabel(hero, text="SYSTEM OVERVIEW  /  نظرة عامة",
+            text_color=("#315FEA", "#8EABFF"),
+            font=ctk.CTkFont(size=10, weight="bold")).grid(
+                row=0, column=0, sticky="w", padx=22, pady=(18, 5))
+        ctk.CTkLabel(hero, text="كل تفاصيل جهازك. في مكان واحد.",
+            font=ctk.CTkFont(size=21, weight="bold")).grid(
+                row=1, column=0, sticky="w", padx=22, pady=(0, 4))
+        ctk.CTkLabel(hero,
+            text="استعرض المكونات، راقب استهلاك الموارد، وشغّل أدوات التشخيص والأداء.",
+            text_color=("#667085", "#A7B5C9"), font=ctk.CTkFont(size=11)).grid(
+                row=2, column=0, sticky="w", padx=22, pady=(0, 18))
+        self.status_label = ctk.CTkLabel(hero, text="●  جارٍ تجهيز البيانات...",
+            text_color="#D69E36", font=ctk.CTkFont(size=10, weight="bold"),
+            fg_color=("#FFF7E6", "#3A3020"), corner_radius=9)
+        self.status_label.grid(row=0, column=1, rowspan=3, padx=22, pady=18, ipadx=10, ipady=7)
 
         self.cards = {}
         card_specs = [
@@ -231,15 +297,25 @@ class PCInfoApp(ctk.CTk):
             ("device", "الشركة والطراز", "جاري القراءة...", "معلومات الجهاز"),
         ]
         for index, (key, title, value, hint) in enumerate(card_specs):
-            card = InfoCard(wrap, title, value, hint, fg_color=("#FFFFFF", "#151F35"), border_color=("#E4E7EC", "#263149"))
-            card.grid(row=1 + index // 3, column=index % 3, sticky="nsew", padx=5, pady=5)
+            card = InfoCard(wrap, title, value, hint,
+                fg_color=("#FFFFFF", "#111C30"),
+                border_color=("#E5EAF2", "#22324C"))
+            card.grid(row=1 + index // 3, column=index % 3,
+                      sticky="nsew", padx=5, pady=5)
             self.cards[key] = card
 
-        note = ctk.CTkFrame(wrap, corner_radius=14, fg_color=("#EEF3FF", "#172542"))
-        note.grid(row=3, column=0, columnspan=3, sticky="ew", padx=5, pady=(16, 5))
-        ctk.CTkLabel(note, text="ملاحظة الإصدار", font=ctk.CTkFont(size=13, weight="bold"), text_color=("#3156C8", "#AFC2FF")).pack(anchor="w", padx=16, pady=(13, 4))
-        ctk.CTkLabel(note, text="هذه نسخة تطويرية تجمع معلومات الجهاز وتراقب موارده، وتضيف الآن فحوصات تشخيصية أولية قابلة للتحقق.",
-                     justify="left", wraplength=800, text_color=("#475467", "#B8C4D9")).pack(anchor="w", padx=16, pady=(0, 13))
+        note = ctk.CTkFrame(wrap, corner_radius=14,
+            fg_color=("#EDF3FF", "#142642"), border_width=1,
+            border_color=("#DCE7FF", "#243D62"))
+        note.grid(row=3, column=0, columnspan=3, sticky="ew", padx=5, pady=(14, 5))
+        ctk.CTkLabel(note, text="خصوصيتك أولاً",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=("#3156C8", "#AFC2FF")).pack(anchor="w", padx=16, pady=(12, 3))
+        ctk.CTkLabel(note,
+            text="تُجمع معلومات العتاد محلياً. لا تُرسل بيانات جهازك إلى خادم خارجي.",
+            justify="left", wraplength=800,
+            text_color=("#475467", "#B8C4D9"),
+            font=ctk.CTkFont(size=10)).pack(anchor="w", padx=16, pady=(0, 12))
         if self.data:
             self._update_dashboard_cards()
 
